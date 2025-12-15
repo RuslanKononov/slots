@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Слот-машина</title>
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; overflow:hidden;}
+body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; overflow:hidden; position:relative;}
 #background {position:fixed; inset:0; background-size:cover; background-position:center; filter:blur(2px) brightness(0.6); z-index:-1;}
 #slotTitle {text-align:center; font-size:28px; margin:20px 0; text-shadow:0 0 10px gold;}
-#slotMachine {display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:16px;}
+#slotMachine {display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:16px; position:relative;}
 .reel {height:240px; overflow:hidden; border:2px solid gold; border-radius:14px; background:rgba(0,0,0,0.75); position:relative;}
 .reel-track {position:absolute; top:0; width:100%;}
 .symbol {height:80px; display:flex; align-items:center; justify-content:center;}
@@ -22,6 +22,7 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
 .popup-content {background:black; border:3px solid gold; border-radius:20px; padding:20px; text-align:center;}
 .popup-content img {max-width:200px; margin:10px 0;}
 #fireworks {position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:19;}
+#lineCanvas {position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:15;}
 </style>
 </head>
 <body>
@@ -38,6 +39,8 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
   <div class="reel" data-col="4"></div>
 </main>
 
+<canvas id="lineCanvas"></canvas>
+
 <button id="spinBtn">КРУТИТЬ</button>
 <button id="settingsBtn">⚙️</button>
 
@@ -52,6 +55,9 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
 <hr>
 <h3>Фон</h3>
 <input type="file" accept="image/*" onchange="setBackground(event)">
+<hr>
+<h3>Шанс выигрыша (%)</h3>
+<input id="winChanceInput" type="number" min="0" max="100">
 <br><br>
 <button id="closeSettingsBtn">⬅ Назад</button>
 </div>
@@ -77,14 +83,15 @@ const titleInput = document.getElementById("titleInput");
 const symbolsList = document.getElementById("symbolsList");
 const addSymbolBtn = document.getElementById("addSymbolBtn");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const winChanceInput = document.getElementById("winChanceInput");
 
 const popup = document.getElementById("popup");
 const popupTitle = document.getElementById("popupTitle");
 const popupImage = document.getElementById("popupImage");
 const popupOk = document.getElementById("popupOk");
 const background = document.getElementById("background");
-
-let winChance = 0.2; // 20% шанс совпадения
+const lineCanvas = document.getElementById("lineCanvas");
+const lineCtx = lineCanvas.getContext("2d");
 
 let state = JSON.parse(localStorage.getItem("state")) || {
   title:"МОИ СЛОТЫ",
@@ -99,20 +106,31 @@ let state = JSON.parse(localStorage.getItem("state")) || {
     {img:"https://via.placeholder.com/100/808080/FFFFFF?text=8", action:"Выигрыш 8", winImg:null}
   ],
   background:"https://via.placeholder.com/800x600/222222/AAAAAA?text=ФОН",
+  winChance:0.2,
   sounds:{win:null,lose:null}
 };
 
 applyBackground();
 slotTitle.innerText = state.title;
+winChanceInput.value = state.winChance*100;
 
 // ---------- SETTINGS ----------
 settingsBtn.onclick = ()=>{ settings.style.display="block"; renderSettings(); }
-closeSettingsBtn.onclick = ()=>{ settings.style.display="none"; slotTitle.innerText=state.title; applyBackground(); renderSlots(); }
+closeSettingsBtn.onclick = ()=>{ settings.style.display="none"; slotTitle.innerText=state.title; applyBackground(); renderSlots(); saveState(); }
 addSymbolBtn.onclick = ()=>{ if(state.symbols.length>=30) return alert("Максимум 30"); state.symbols.push({img:"",action:"",winImg:null}); renderSettings(); saveState(); }
 
 function renderSettings(){
   titleInput.value = state.title;
   titleInput.oninput = e=>{ state.title=e.target.value; saveState(); }
+
+  winChanceInput.value = state.winChance*100;
+  winChanceInput.oninput = e => {
+    let val = parseFloat(e.target.value);
+    if(isNaN(val)||val<0) val=0;
+    if(val>100) val=100;
+    state.winChance=val/100;
+    saveState();
+  }
 
   symbolsList.innerHTML="";
   state.symbols.forEach((s,i)=>{
@@ -143,7 +161,7 @@ function saveState(){ localStorage.setItem("state",JSON.stringify(state)); }
 function applyBackground(){ if(state.background) background.style.backgroundImage=`url(${state.background})`; }
 
 // ---------- POPUP ----------
-popupOk.onclick=()=>{ popup.style.display="none"; stopFireworks(); }
+popupOk.onclick=()=>{ popup.style.display="none"; stopFireworks(); clearLine(); }
 function showPopup(title,text,img){
   popupTitle.innerText = title+"\n"+text;
   if(img){ popupImage.src=img; popupImage.style.display="block"; }
@@ -159,8 +177,8 @@ spinBtn.onclick=()=>{
   if(state.symbols.length<8){ alert("Минимум 8 символов"); return; }
   spinBtn.disabled=true;
   const reels=document.querySelectorAll(".reel");
-  const finalResult=[];
-  const isWin=Math.random()<winChance;
+  const finalResult=[]; // массив 5 колонок по 3 символа
+  const isWin=Math.random()<state.winChance;
 
   reels.forEach((reel,colIndex)=>{
     reel.innerHTML="";
@@ -171,17 +189,14 @@ spinBtn.onclick=()=>{
     if(isWin){
         const s=state.symbols[Math.floor(Math.random()*state.symbols.length)];
         visible=[shuffle(state.symbols)[0],s,shuffle(state.symbols)[1]];
-        finalResult[colIndex]=s;
     } else {
-        const pool=shuffle(state.symbols);
-        visible=pool.slice(0,3);
-        finalResult[colIndex]=visible[1];
+        visible=shuffle(state.symbols).slice(0,3);
     }
+    finalResult[colIndex]=visible;
 
     const spinList=[];
     for(let i=0;i<10;i++) spinList.push(...shuffle(state.symbols));
     spinList.push(...visible);
-
     spinList.forEach(s=>track.appendChild(createSymbolEl(s)));
     reel.appendChild(track);
 
@@ -195,16 +210,50 @@ spinBtn.onclick=()=>{
 
   setTimeout(()=>{
     spinBtn.disabled=false;
-    checkWinAnimated(finalResult);
+    checkWinLine(finalResult);
   },2500+reels.length*300);
 };
 
-function checkWinAnimated(centerSymbols){
-  const first=centerSymbols[0].img;
-  const win=centerSymbols.every(s=>s.img===first);
-  if(win){ showPopup("🎉 ВЫИГРЫШ!",centerSymbols[0].action,centerSymbols[0].winImg||centerSymbols[0].img); startFireworks(); playSound("win"); }
-  else{ showPopup("😌 Не повезло","В следующий раз точно повезёт"); playSound("lose"); }
+// ---------- WIN LINE ----------
+function checkWinLine(columns){
+    clearLine();
+    // ищем символ, который есть в каждой колонке
+    let winningSymbol=null;
+    state.symbols.forEach(sym=>{
+        if(columns.every(col => col.some(c=>c.img===sym.img))) winningSymbol=sym;
+    });
+    if(winningSymbol){
+        drawWinLine(columns, winningSymbol);
+        showPopup("🎉 ВЫИГРЫШ!", winningSymbol.action, winningSymbol.winImg||winningSymbol.img);
+        startFireworks();
+        playSound("win");
+    } else {
+        showPopup("😌 Не повезло", "В следующий раз точно повезёт");
+        playSound("lose");
+    }
 }
+
+function drawWinLine(columns,symbol){
+    lineCanvas.width = lineCanvas.clientWidth;
+    lineCanvas.height = lineCanvas.clientHeight;
+    lineCtx.clearRect(0,0,lineCanvas.width,lineCanvas.height);
+    lineCtx.strokeStyle="gold";
+    lineCtx.lineWidth=5;
+    lineCtx.beginPath();
+    const reelElems=document.querySelectorAll(".reel");
+    columns.forEach((col,i)=>{
+        const rowIndex = col.findIndex(s=>s.img===symbol.img);
+        const reel = reelElems[i];
+        const rect = reel.getBoundingClientRect();
+        const y = rect.top + rowIndex*80 + 40;
+        const x = rect.left + rect.width/2;
+        if(i===0) lineCtx.moveTo(x,y);
+        else lineCtx.lineTo(x,y);
+    });
+    lineCtx.stroke();
+}
+
+function clearLine(){ lineCtx.clearRect(0,0,lineCanvas.width,lineCanvas.height); }
 
 // ---------- SOUND ----------
 function playSound(type){ if(!state.sounds[type]) return; const audio=new Audio(state.sounds[type]); audio.play(); }
