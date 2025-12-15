@@ -2,64 +2,166 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>Слот-машина</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Слоты</title>
+
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; overflow:hidden; position:relative;}
-#background {position:fixed; inset:0; background-size:cover; background-position:center; filter:blur(2px) brightness(0.6); z-index:-1;}
-#slotTitle {text-align:center; font-size:28px; margin:20px 0; text-shadow:0 0 10px gold;}
-#slotMachine {display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:16px; position:relative;}
-.reel {height:240px; overflow:hidden; border:2px solid gold; border-radius:14px; background:rgba(0,0,0,0.75); position:relative;}
-.reel-track {position:absolute; top:0; width:100%;}
-.symbol {height:80px; display:flex; align-items:center; justify-content:center;}
-.symbol img {max-height:70px; max-width:70px;}
-#spinBtn {width:80%; margin:20px auto; display:block; font-size:26px; padding:16px; background:linear-gradient(red,darkred); color:white; border:none; border-radius:40px; box-shadow:0 0 20px red;}
-#settingsBtn {position:fixed; top:10px; right:10px; font-size:24px; background:black; color:gold; border:2px solid gold; border-radius:50%; width:44px; height:44px;}
-#settings {position:fixed; inset:0; background:black; color:gold; padding:20px; overflow-y:auto; z-index:10; display:none;}
-#settings input, #settings button {width:100%; margin:6px 0; padding:10px; font-size:16px;}
-.symbol-item {border:1px solid gold; padding:10px; margin-bottom:10px;}
-#popup {position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:20;}
-.popup-content {background:black; border:3px solid gold; border-radius:20px; padding:20px; text-align:center;}
-.popup-content img {max-width:200px; margin:10px 0;}
-#fireworks {position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:19;}
-#lineCanvas {position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:15;}
+body{
+  margin:0;
+  background:black;
+  color:gold;
+  font-family:Arial, sans-serif;
+  overflow:hidden;
+}
+
+#slotTitle{
+  text-align:center;
+  font-size:26px;
+  margin:10px 0;
+  text-shadow:0 0 10px gold;
+}
+
+#slotWrapper{
+  position:relative;
+}
+
+#slotMachine{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  padding:10px;
+}
+
+.reel{
+  height:240px;
+  overflow:hidden;
+  border:2px solid gold;
+  border-radius:12px;
+  background:rgba(0,0,0,.8);
+  position:relative;
+}
+
+.reel-track{
+  position:absolute;
+  top:0;
+  width:100%;
+  transition:transform 1.4s cubic-bezier(.1,.7,.1,1);
+}
+
+.symbol{
+  height:80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.symbol img{
+  width:64px;
+  height:64px;
+}
+
+button{
+  display:block;
+  width:80%;
+  margin:15px auto;
+  padding:14px;
+  font-size:22px;
+  border-radius:30px;
+  border:none;
+  background:linear-gradient(red,darkred);
+  color:white;
+}
+
+#settingsBtn{
+  position:fixed;
+  top:10px;
+  right:10px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:black;
+  color:gold;
+  border:2px solid gold;
+  font-size:22px;
+  z-index:20;
+}
+
+#settings{
+  position:fixed;
+  inset:0;
+  background:black;
+  color:gold;
+  padding:20px;
+  overflow:auto;
+  z-index:30;
+  display:none;
+}
+
+#settings input{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+}
+
+#popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.85);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:40;
+}
+
+.popup-content{
+  background:black;
+  border:3px solid gold;
+  border-radius:16px;
+  padding:20px;
+  text-align:center;
+}
+
+.popup-content img{
+  max-width:180px;
+  margin:10px 0;
+}
+
+canvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
+
+#lineCanvas{ z-index:25; }
+#fireworks{ z-index:24; }
 </style>
 </head>
-<body>
 
-<div id="background"></div>
+<body>
 
 <header id="slotTitle">МОИ СЛОТЫ</header>
 
-<main id="slotMachine">
-  <div class="reel" data-col="0"></div>
-  <div class="reel" data-col="1"></div>
-  <div class="reel" data-col="2"></div>
-  <div class="reel" data-col="3"></div>
-  <div class="reel" data-col="4"></div>
-</main>
-
-<canvas id="lineCanvas"></canvas>
+<div id="slotWrapper">
+  <div id="slotMachine">
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+  </div>
+  <canvas id="lineCanvas"></canvas>
+</div>
 
 <button id="spinBtn">КРУТИТЬ</button>
 <button id="settingsBtn">⚙️</button>
 
 <div id="settings">
-<h2>Настройки</h2>
-<label>Название слотов</label>
-<input id="titleInput" type="text">
-<hr>
-<h3>Символы</h3>
-<div id="symbolsList"></div>
-<button id="addSymbolBtn">➕ Добавить символ</button>
-<hr>
-<h3>Фон</h3>
-<input type="file" accept="image/*" onchange="setBackground(event)">
-<hr>
-<h3>Шанс выигрыша (%)</h3>
-<input id="winChanceInput" type="number" min="0" max="100">
-<br><br>
-<button id="closeSettingsBtn">⬅ Назад</button>
+  <h2>Настройки</h2>
+  <label>Название</label>
+  <input id="titleInput">
+  <label>Шанс выигрыша (%)</label>
+  <input id="chanceInput" type="number" min="0" max="100">
+  <button onclick="closeSettings()">⬅ Назад</button>
 </div>
 
 <div id="popup">
@@ -73,216 +175,186 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
 <canvas id="fireworks"></canvas>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+/* ---------- STATE ---------- */
+const defaultSymbols=[
+  {id:1,img:"https://i.imgur.com/6XgZ7QH.png",action:"Золото!"},
+  {id:2,img:"https://i.imgur.com/BoN9kdC.png",action:"Алмаз!"},
+  {id:3,img:"https://i.imgur.com/zYxDCQT.png",action:"Вишня!"},
+  {id:4,img:"https://i.imgur.com/L8J5y5s.png",action:"Семёрка!"}
+];
 
-const slotTitle = document.getElementById("slotTitle");
-const spinBtn = document.getElementById("spinBtn");
-const settingsBtn = document.getElementById("settingsBtn");
-const settings = document.getElementById("settings");
-const titleInput = document.getElementById("titleInput");
-const symbolsList = document.getElementById("symbolsList");
-const addSymbolBtn = document.getElementById("addSymbolBtn");
-const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const winChanceInput = document.getElementById("winChanceInput");
-
-const popup = document.getElementById("popup");
-const popupTitle = document.getElementById("popupTitle");
-const popupImage = document.getElementById("popupImage");
-const popupOk = document.getElementById("popupOk");
-const background = document.getElementById("background");
-const lineCanvas = document.getElementById("lineCanvas");
-const lineCtx = lineCanvas.getContext("2d");
-
-let state = JSON.parse(localStorage.getItem("state")) || {
+let state=JSON.parse(localStorage.getItem("slotState"))||{
   title:"МОИ СЛОТЫ",
-  symbols:[
-    {img:"https://via.placeholder.com/100/FF0000/FFFFFF?text=1", action:"Выигрыш 1", winImg:null},
-    {img:"https://via.placeholder.com/100/00FF00/FFFFFF?text=2", action:"Выигрыш 2", winImg:null},
-    {img:"https://via.placeholder.com/100/0000FF/FFFFFF?text=3", action:"Выигрыш 3", winImg:null},
-    {img:"https://via.placeholder.com/100/FFFF00/000000?text=4", action:"Выигрыш 4", winImg:null},
-    {img:"https://via.placeholder.com/100/FF00FF/FFFFFF?text=5", action:"Выигрыш 5", winImg:null},
-    {img:"https://via.placeholder.com/100/00FFFF/000000?text=6", action:"Выигрыш 6", winImg:null},
-    {img:"https://via.placeholder.com/100/FFA500/FFFFFF?text=7", action:"Выигрыш 7", winImg:null},
-    {img:"https://via.placeholder.com/100/808080/FFFFFF?text=8", action:"Выигрыш 8", winImg:null}
-  ],
-  background:"https://via.placeholder.com/800x600/222222/AAAAAA?text=ФОН",
-  winChance:0.2,
-  sounds:{win:null,lose:null}
+  winChance:0.3,
+  symbols:defaultSymbols
 };
 
-applyBackground();
-slotTitle.innerText = state.title;
-winChanceInput.value = state.winChance*100;
+function save(){ localStorage.setItem("slotState",JSON.stringify(state)); }
 
-// ---------- SETTINGS ----------
-settingsBtn.onclick = ()=>{ settings.style.display="block"; renderSettings(); }
-closeSettingsBtn.onclick = ()=>{ settings.style.display="none"; slotTitle.innerText=state.title; applyBackground(); renderSlots(); saveState(); }
-addSymbolBtn.onclick = ()=>{ if(state.symbols.length>=30) return alert("Максимум 30"); state.symbols.push({img:"",action:"",winImg:null}); renderSettings(); saveState(); }
+/* ---------- UI ---------- */
+slotTitle.innerText=state.title;
+titleInput.value=state.title;
+chanceInput.value=state.winChance*100;
 
-function renderSettings(){
-  titleInput.value = state.title;
-  titleInput.oninput = e=>{ state.title=e.target.value; saveState(); }
-
-  winChanceInput.value = state.winChance*100;
-  winChanceInput.oninput = e => {
-    let val = parseFloat(e.target.value);
-    if(isNaN(val)||val<0) val=0;
-    if(val>100) val=100;
-    state.winChance=val/100;
-    saveState();
-  }
-
-  symbolsList.innerHTML="";
-  state.symbols.forEach((s,i)=>{
-    const div=document.createElement("div");
-    div.className="symbol-item";
-    div.innerHTML=`
-      <label>Картинка символа</label>
-      <input type="file" accept="image/*" onchange="loadSymbolImg(event,${i})">
-      <label>Текст выигрыша</label>
-      <input value="${s.action||""}" oninput="state.symbols[${i}].action=this.value; saveState()">
-      <label>Картинка popup</label>
-      <input type="file" accept="image/*" onchange="loadWinImg(event,${i})">
-      <button onclick="removeSymbol(${i})">🗑 Удалить</button>
-    `;
-    symbolsList.appendChild(div);
-  });
+settingsBtn.onclick=()=>settings.style.display="block";
+function closeSettings(){
+  state.title=titleInput.value;
+  state.winChance=chanceInput.value/100;
+  slotTitle.innerText=state.title;
+  save();
+  settings.style.display="none";
 }
 
-window.loadSymbolImg=(e,i)=>{ const r=new FileReader(); r.onload=()=>{state.symbols[i].img=r.result; saveState();}; r.readAsDataURL(e.target.files[0]); }
-window.loadWinImg=(e,i)=>{ const r=new FileReader(); r.onload=()=>{state.symbols[i].winImg=r.result; saveState();}; r.readAsDataURL(e.target.files[0]); }
-window.setBackground=(e)=>{ const r=new FileReader(); r.onload=()=>{state.background=r.result; applyBackground(); saveState();}; r.readAsDataURL(e.target.files[0]); }
+/* ---------- SLOT LOGIC ---------- */
+const reels=document.querySelectorAll(".reel");
 
-function removeSymbol(i){ if(state.symbols.length<=8) return alert("Минимум 8"); state.symbols.splice(i,1); renderSettings(); saveState(); }
-
-function saveState(){ localStorage.setItem("state",JSON.stringify(state)); }
-
-// ---------- BACKGROUND ----------
-function applyBackground(){ if(state.background) background.style.backgroundImage=`url(${state.background})`; }
-
-// ---------- POPUP ----------
-popupOk.onclick=()=>{ popup.style.display="none"; stopFireworks(); clearLine(); }
-function showPopup(title,text,img){
-  popupTitle.innerText = title+"\n"+text;
-  if(img){ popupImage.src=img; popupImage.style.display="block"; }
-  else popupImage.style.display="none";
-  popup.style.display="flex";
+function createSymbol(s){
+  const d=document.createElement("div");
+  d.className="symbol";
+  const i=document.createElement("img");
+  i.src=s.img;
+  d.appendChild(i);
+  return d;
 }
 
-// ---------- SPIN ----------
-function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
-function createSymbolEl(symbol){ const div=document.createElement("div"); div.className="symbol"; const img=document.createElement("img"); img.src=symbol.img; div.appendChild(img); return div; }
+spinBtn.onclick=spin;
 
-spinBtn.onclick=()=>{
-  if(state.symbols.length<8){ alert("Минимум 8 символов"); return; }
+function spin(){
   spinBtn.disabled=true;
-  const reels=document.querySelectorAll(".reel");
-  const finalResult=[]; // массив 5 колонок по 3 символа
-  const isWin=Math.random()<state.winChance;
+  clearLine();
 
-  reels.forEach((reel,colIndex)=>{
+  const isWin=Math.random()<state.winChance;
+  let winSymbol=isWin?state.symbols[Math.floor(Math.random()*state.symbols.length)]:null;
+  let columns=[];
+
+  reels.forEach((reel,idx)=>{
     reel.innerHTML="";
     const track=document.createElement("div");
     track.className="reel-track";
-
     let visible;
-    if(isWin){
-        const s=state.symbols[Math.floor(Math.random()*state.symbols.length)];
-        visible=[shuffle(state.symbols)[0],s,shuffle(state.symbols)[1]];
-    } else {
-        visible=shuffle(state.symbols).slice(0,3);
-    }
-    finalResult[colIndex]=visible;
 
-    const spinList=[];
-    for(let i=0;i<10;i++) spinList.push(...shuffle(state.symbols));
-    spinList.push(...visible);
-    spinList.forEach(s=>track.appendChild(createSymbolEl(s)));
+    if(isWin){
+      visible=[randomSymbol(),winSymbol,randomSymbol()];
+    }else{
+      visible=[randomSymbol(),randomSymbol(),randomSymbol()];
+    }
+
+    columns.push(visible);
+
+    const spinList=[...Array(10)].map(randomSymbol).concat(visible);
+    spinList.forEach(s=>track.appendChild(createSymbol(s)));
     reel.appendChild(track);
 
     const offset=(spinList.length-3)*80;
-    track.style.transform=`translateY(0)`;
-    setTimeout(()=>{
-      track.style.transition=`transform ${1.5+colIndex*0.3}s cubic-bezier(.1,.7,.1,1)`;
-      track.style.transform=`translateY(-${offset}px)`;
-    },50);
+    track.style.transform="translateY(0)";
+    setTimeout(()=>track.style.transform=`translateY(-${offset}px)`,idx*200);
   });
 
   setTimeout(()=>{
     spinBtn.disabled=false;
-    checkWinLine(finalResult);
-  },2500+reels.length*300);
+    checkWin(columns);
+  },1600);
+}
+
+function randomSymbol(){
+  return state.symbols[Math.floor(Math.random()*state.symbols.length)];
+}
+
+/* ---------- WIN CHECK ---------- */
+const lineCanvas=document.getElementById("lineCanvas");
+const ctx=lineCanvas.getContext("2d");
+resizeCanvas();
+window.onresize=resizeCanvas;
+
+function resizeCanvas(){
+  lineCanvas.width=innerWidth;
+  lineCanvas.height=innerHeight;
+}
+
+function checkWin(columns){
+  let symbol=state.symbols.find(s=>
+    columns.every(col=>col.some(c=>c.img===s.img))
+  );
+
+  if(symbol){
+    animateLine(columns,symbol);
+    showPopup("🎉 ВЫИГРЫШ!",symbol.action,symbol.img);
+    startFireworks();
+  }else{
+    showPopup("😌 Не повезло","Попробуй ещё");
+  }
+}
+
+/* ---------- LINE ANIMATION ---------- */
+function animateLine(cols,symbol){
+  let points=[];
+  reels.forEach((reel,i)=>{
+    const row=cols[i].findIndex(s=>s.img===symbol.img);
+    const r=reel.getBoundingClientRect();
+    points.push({
+      x:r.left+r.width/2,
+      y:r.top+row*80+40
+    });
+  });
+
+  ctx.strokeStyle="gold";
+  ctx.lineWidth=6;
+  ctx.shadowBlur=15;
+  ctx.shadowColor="gold";
+
+  let i=0;
+  function draw(){
+    if(i>=points.length-1)return;
+    ctx.beginPath();
+    ctx.moveTo(points[i].x,points[i].y);
+    ctx.lineTo(points[i+1].x,points[i+1].y);
+    ctx.stroke();
+    i++;
+    setTimeout(draw,150);
+  }
+  draw();
+}
+
+function clearLine(){
+  ctx.clearRect(0,0,lineCanvas.width,lineCanvas.height);
+}
+
+/* ---------- POPUP ---------- */
+popupOk.onclick=()=>{
+  popup.style.display="none";
+  stopFireworks();
+  clearLine();
 };
 
-// ---------- WIN LINE ----------
-function checkWinLine(columns){
-    clearLine();
-    // ищем символ, который есть в каждой колонке
-    let winningSymbol=null;
-    state.symbols.forEach(sym=>{
-        if(columns.every(col => col.some(c=>c.img===sym.img))) winningSymbol=sym;
-    });
-    if(winningSymbol){
-        drawWinLine(columns, winningSymbol);
-        showPopup("🎉 ВЫИГРЫШ!", winningSymbol.action, winningSymbol.winImg||winningSymbol.img);
-        startFireworks();
-        playSound("win");
-    } else {
-        showPopup("😌 Не повезло", "В следующий раз точно повезёт");
-        playSound("lose");
-    }
+function showPopup(title,text,img){
+  popupTitle.innerText=title+"\n"+text;
+  popupImage.src=img||"";
+  popup.style.display="flex";
 }
 
-function drawWinLine(columns,symbol){
-    lineCanvas.width = lineCanvas.clientWidth;
-    lineCanvas.height = lineCanvas.clientHeight;
-    lineCtx.clearRect(0,0,lineCanvas.width,lineCanvas.height);
-    lineCtx.strokeStyle="gold";
-    lineCtx.lineWidth=5;
-    lineCtx.beginPath();
-    const reelElems=document.querySelectorAll(".reel");
-    columns.forEach((col,i)=>{
-        const rowIndex = col.findIndex(s=>s.img===symbol.img);
-        const reel = reelElems[i];
-        const rect = reel.getBoundingClientRect();
-        const y = rect.top + rowIndex*80 + 40;
-        const x = rect.left + rect.width/2;
-        if(i===0) lineCtx.moveTo(x,y);
-        else lineCtx.lineTo(x,y);
-    });
-    lineCtx.stroke();
-}
-
-function clearLine(){ lineCtx.clearRect(0,0,lineCanvas.width,lineCanvas.height); }
-
-// ---------- SOUND ----------
-function playSound(type){ if(!state.sounds[type]) return; const audio=new Audio(state.sounds[type]); audio.play(); }
-
-// ---------- FIREWORKS ----------
+/* ---------- FIREWORKS ---------- */
 let fw;
-function startFireworks(){ 
-  const c=document.getElementById("fireworks"); 
-  const ctx=c.getContext("2d"); 
-  c.width=innerWidth; c.height=innerHeight; 
-  fw=setInterval(()=>{ ctx.fillStyle="rgba(0,0,0,0.2)"; ctx.fillRect(0,0,c.width,c.height); ctx.fillStyle="gold"; ctx.beginPath(); ctx.arc(Math.random()*c.width,Math.random()*c.height,4,0,Math.PI*2); ctx.fill(); },50); 
+function startFireworks(){
+  const c=fireworks;
+  const fctx=c.getContext("2d");
+  c.width=innerWidth;
+  c.height=innerHeight;
+  fw=setInterval(()=>{
+    fctx.fillStyle="rgba(0,0,0,.2)";
+    fctx.fillRect(0,0,c.width,c.height);
+    fctx.fillStyle="gold";
+    fctx.beginPath();
+    fctx.arc(Math.random()*c.width,Math.random()*c.height,4,0,Math.PI*2);
+    fctx.fill();
+  },50);
 }
-function stopFireworks(){ clearInterval(fw); }
 
-// ---------- RENDER SLOTS ----------
-function renderSlots(){ 
-  const reels=document.querySelectorAll(".reel"); 
-  reels.forEach((reel,i)=>{ 
-    reel.innerHTML=""; 
-    const track=document.createElement("div"); 
-    track.className="reel-track"; 
-    const visible=[state.symbols[i%state.symbols.length],state.symbols[(i+1)%state.symbols.length],state.symbols[(i+2)%state.symbols.length]]; 
-    visible.forEach(s=>track.appendChild(createSymbolEl(s))); 
-    reel.appendChild(track); 
-  }); 
+function stopFireworks(){
+  clearInterval(fw);
+  const c=fireworks;
+  c.getContext("2d").clearRect(0,0,c.width,c.height);
 }
-renderSlots();
-
-});
 </script>
+
 </body>
 </html>
