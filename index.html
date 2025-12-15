@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Слот-машина</title>
+
+    <style>
+        body{
+            margin:0;
+            font-family:Arial, sans-serif;
+            background:black;
+            color:gold;
+            overflow:hidden;
+        }
+
+        #background{
+            position:fixed;
+            inset:0;
+            background-size:cover;
+            background-position:center;
+            filter:blur(2px) brightness(.6);
+            z-index:-1;
+        }
+
+        #slotTitle{
+            text-align:center;
+            font-size:28px;
+            margin:20px 0;
+            text-shadow:0 0 10px gold;
+        }
+
+        #slotMachine{
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:10px;
+            padding:16px;
+        }
+
+        .reel{
+            height:240px;
+            overflow:hidden;
+            border:2px solid gold;
+            border-radius:14px;
+            background:rgba(0,0,0,.75);
+            position:relative;
+        }
+
+        .reel-track{
+            position:absolute;
+            top:0;
+            width:100%;
+            transition:transform .8s cubic-bezier(.1,.7,.1,1);
+        }
+
+        .symbol{
+            height:80px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .symbol img{
+            max-width:70px;
+            max-height:70px;
+        }
+
+        #spinBtn{
+            width:80%;
+            margin:20px auto;
+            display:block;
+            font-size:26px;
+            padding:16px;
+            background:linear-gradient(red,darkred);
+            color:white;
+            border:none;
+            border-radius:40px;
+            box-shadow:0 0 20px red;
+        }
+
+        #settingsBtn{
+            position:fixed;
+            top:10px;
+            right:10px;
+            font-size:22px;
+            background:black;
+            color:gold;
+            border:2px solid gold;
+            border-radius:50%;
+            width:44px;
+            height:44px;
+        }
+
+        /*#popup{*/
+        /*    position:fixed;*/
+        /*    inset:0;*/
+        /*    background:rgba(0,0,0,.85);*/
+        /*    display:flex;*/
+        /*    align-items:center;*/
+        /*    justify-content:center;*/
+        /*}*/
+
+        #popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;           /* ВАЖНО */
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        .hidden{display:none;}
+
+        .popup-content{
+            background:black;
+            border:3px solid gold;
+            border-radius:20px;
+            padding:20px;
+            text-align:center;
+        }
+
+        .popup-content img{
+            max-width:200px;
+            margin:10px 0;
+        }
+
+        canvas{
+            position:absolute;
+            inset:0;
+        }
+
+        #settings{
+            position:fixed;
+            inset:0;
+            background:black;
+            color:gold;
+            padding:20px;
+            overflow-y:auto;
+            z-index:20;
+        }
+
+        #settings input, #settings button{
+            width:100%;
+            margin:6px 0;
+            padding:10px;
+            font-size:16px;
+        }
+
+        .symbol-item{
+            border:1px solid gold;
+            padding:10px;
+            margin-bottom:10px;
+            border-radius:10px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div id="background"></div>
+
+<header id="slotTitle">МОИ СЛОТЫ</header>
+
+<main id="slotMachine">
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+    <div class="reel"></div>
+</main>
+
+<button id="spinBtn">КРУТИТЬ</button>
+<button id="settingsBtn">⚙️</button>
+
+<div id="popup" class="hidden">
+    <div class="popup-content">
+        <h2 id="popupTitle"></h2>
+        <img id="popupImage">
+<!--        <button onclick="closePopup()">OK</button>-->
+        <button id="popupOk">OK</button>
+    </div>
+    <canvas id="fireworks"></canvas>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        /* ---------- DOM ---------- */
+        const popup = document.getElementById("popup");
+        const popupTitle = document.getElementById("popupTitle");
+        const popupImage = document.getElementById("popupImage");
+        const background = document.getElementById("background");
+        const slotTitle = document.getElementById("slotTitle");
+        const settingsBtn = document.getElementById("settingsBtn");
+
+        /* ---------- STATE ---------- */
+        let state = JSON.parse(localStorage.getItem("state")) || {
+            title: "МОИ СЛОТЫ",
+            symbols: [
+                {
+                    img: "https://via.placeholder.com/80?text=🍒",
+                    action: "Вишни!",
+                    winImg: "https://via.placeholder.com/200?text=🍒"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=🍋",
+                    action: "Лимоны!",
+                    winImg: "https://via.placeholder.com/200?text=🍋"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=⭐",
+                    action: "Звезды!",
+                    winImg: "https://via.placeholder.com/200?text=⭐"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=💎",
+                    action: "Алмазы!",
+                    winImg: "https://via.placeholder.com/200?text=💎"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=🔔",
+                    action: "Колокольчики!",
+                    winImg: "https://via.placeholder.com/200?text=🔔"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=7️⃣",
+                    action: "Семерки!",
+                    winImg: "https://via.placeholder.com/200?text=7️⃣"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=🍀",
+                    action: "Удача!",
+                    winImg: "https://via.placeholder.com/200?text=🍀"
+                },
+                {
+                    img: "https://via.placeholder.com/80?text=👑",
+                    action: "Короны!",
+                    winImg: "https://via.placeholder.com/200?text=👑"
+                }
+            ],
+            sounds: {}
+        };
+
+        document.getElementById("slotTitle").innerText = state.title;
+
+        /* ---------- UTILS ---------- */
+        const reels = document.querySelectorAll(".reel");
+        const spinBtn = document.getElementById("spinBtn");
+
+        function shuffle(a) {
+            return [...a].sort(() => Math.random() - .5);
+        }
+
+        function save() {
+            localStorage.setItem("state", JSON.stringify(state));
+        }
+
+        function createSymbol(s) {
+            const d = document.createElement("div");
+            d.className = "symbol";
+            const i = document.createElement("img");
+            i.src = s.img;
+            d.appendChild(i);
+            return d;
+        }
+
+        /* ---------- SPIN ---------- */
+        spinBtn.onclick = () => {
+            spinBtn.disabled = true;
+            const centers = [];
+
+            reels.forEach((reel, i) => {
+                reel.innerHTML = "";
+                const track = document.createElement("div");
+                track.className = "reel-track";
+
+                const pool = shuffle(state.symbols);
+                const visible = pool.slice(0, 3);
+                centers[i] = visible[1];
+
+                const list = shuffle(state.symbols).concat(visible);
+                list.forEach(s => track.appendChild(createSymbol(s)));
+                reel.appendChild(track);
+
+                const offset = (list.length - 3) * 80;
+                setTimeout(() => {
+                    track.style.transform = `translateY(-${offset}px)`;
+                }, i * 250);
+            });
+
+            setTimeout(() => {
+                spinBtn.disabled = false;
+                checkWin(centers);
+            }, 2000);
+        };
+
+        /* ---------- WIN ---------- */
+        function checkWin(c) {
+            const win = c.every(s => s.img === c[0].img);
+            if (win) {
+                showPopup("🎉 ВЫИГРЫШ!", c[0].action, c[0].winImg);
+                fireworks();
+            } else {
+                showPopup("😌 Не повезло", "В следующий раз точно повезёт");
+            }
+        }
+
+        /* ---------- POPUP ---------- */
+        const popupOk = document.getElementById("popupOk");
+
+        popupOk.addEventListener("click", closePopup);
+
+        // function showPopup(t, txt, img) {
+        //     popupTitle.innerText = t + "\n" + txt;
+        //     if (img) {
+        //         popupImage.src = img;
+        //         popupImage.style.display = "block";
+        //     } else popupImage.style.display = "none";
+        //     popup.classList.remove("hidden");
+        // }
+
+        function showPopup(title, text, img){
+            popupTitle.innerText = title + "\n" + text;
+            if(img){
+                popupImage.src = img;
+                popupImage.style.display = "block";
+            } else {
+                popupImage.style.display = "none";
+            }
+            popup.style.display = "flex";
+        }
+
+        // function closePopup() {
+        //     popup.classList.add("hidden");
+        //     stopFireworks();
+        // }
+
+        function closePopup(){
+            popup.style.display = "none";
+            stopFireworks();
+        }
+
+        /* ---------- FIREWORKS ---------- */
+        let fw;
+
+        function fireworks() {
+            const c = document.getElementById("fireworks");
+            const x = c.getContext("2d");
+            c.width = innerWidth;
+            c.height = innerHeight;
+            fw = setInterval(() => {
+                x.fillStyle = "rgba(0,0,0,.2)";
+                x.fillRect(0, 0, c.width, c.height);
+                x.fillStyle = "gold";
+                x.beginPath();
+                x.arc(Math.random() * c.width, Math.random() * c.height, 4, 0, 7);
+                x.fill();
+            }, 50);
+        }
+
+        function stopFireworks() {
+            clearInterval(fw);
+        }
+
+        const settings = document.getElementById("settings");
+        const titleInput = document.getElementById("titleInput");
+        const symbolsList = document.getElementById("symbolsList");
+
+        settingsBtn.onclick = () => {
+            settings.classList.remove("hidden");
+            renderSettings();
+        };
+
+        function closeSettings() {
+            settings.classList.add("hidden");
+            slotTitle.innerText = state.title;
+            applyBackground();
+            save();
+        }
+
+        /* ---------- TITLE ---------- */
+        function renderSettings() {
+            titleInput.value = state.title;
+            titleInput.oninput = e => {
+                state.title = e.target.value;
+                save();
+            };
+
+            symbolsList.innerHTML = "";
+            state.symbols.forEach((s, i) => {
+                const div = document.createElement("div");
+                div.className = "symbol-item";
+                div.innerHTML = `
+          <label>Картинка символа</label>
+          <input type="file" accept="image/*" onchange="loadImg(event,${i},'img')">
+
+          <label>Текст выигрыша</label>
+          <input value="${s.action || ""}"
+            oninput="state.symbols[${i}].action=this.value;save()">
+
+          <label>Картинка popup</label>
+          <input type="file" accept="image/*" onchange="loadImg(event,${i},'winImg')">
+
+          <button onclick="removeSymbol(${i})">🗑 Удалить</button>
+        `;
+                symbolsList.appendChild(div);
+            });
+        }
+
+        /* ---------- SYMBOLS ---------- */
+        function addSymbol() {
+            if (state.symbols.length >= 30) {
+                alert("Максимум 30 символов");
+                return;
+            }
+            state.symbols.push({img: "", action: "", winImg: ""});
+            renderSettings();
+            save();
+        }
+
+        function removeSymbol(i) {
+            if (state.symbols.length <= 8) {
+                alert("Минимум 8 символов");
+                return;
+            }
+            state.symbols.splice(i, 1);
+            renderSettings();
+            save();
+        }
+
+        /* ---------- FILE LOAD ---------- */
+        function loadImg(e, i, key) {
+            const r = new FileReader();
+            r.onload = () => {
+                state.symbols[i][key] = r.result;
+                save();
+            }
+            r.readAsDataURL(e.target.files[0]);
+        }
+
+        /* ---------- BACKGROUND ---------- */
+        function setBackground(e) {
+            const r = new FileReader();
+            r.onload = () => {
+                state.background = r.result;
+                applyBackground();
+                save();
+            };
+            r.readAsDataURL(e.target.files[0]);
+        }
+
+        function applyBackground() {
+            if (state.background) {
+                background.style.backgroundImage = `url(${state.background})`;
+            }
+        }
+
+        /* ---------- SOUND ---------- */
+        function setSound(e, type) {
+            const r = new FileReader();
+            r.onload = () => {
+                state.sounds[type] = r.result;
+                save();
+            }
+            r.readAsDataURL(e.target.files[0]);
+        }
+
+        popup.classList.add("hidden");
+    });
+</script>
+
+<div id="settings" class="hidden">
+    <h2>⚙️ Настройки</h2>
+
+    <label>Название слот-машины</label>
+    <input id="titleInput" type="text">
+
+    <hr>
+
+    <h3>🎰 Символы</h3>
+    <div id="symbolsList"></div>
+    <button onclick="addSymbol()">➕ Добавить символ</button>
+
+    <hr>
+
+    <h3>🖼 Фон</h3>
+    <input type="file" accept="image/*" onchange="setBackground(event)">
+
+    <hr>
+
+    <h3>🔊 Звуки</h3>
+    <label>Выигрыш</label>
+    <input type="file" accept="audio/*" onchange="setSound(event,'win')">
+
+    <label>Проигрыш</label>
+    <input type="file" accept="audio/*" onchange="setSound(event,'lose')">
+
+    <br><br>
+    <button onclick="closeSettings()">⬅ Назад</button>
+</div>
+
+</body>
+</html>
