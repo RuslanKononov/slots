@@ -372,12 +372,14 @@
             renderSettings();
         };
 
-        function closeSettings() {
-            settings.classList.add("hidden");
-            slotTitle.innerText = state.title;
-            applyBackground();
-            save();
-        }
+        const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+
+closeSettingsBtn.addEventListener("click", () => {
+    settings.classList.add("hidden"); // скрываем настройки
+    slotTitle.innerText = state.title; // обновляем заголовок
+    applyBackground();                 // применяем фон
+    saveState();                       // сохраняем изменения
+});
 
         /* ---------- TITLE ---------- */
         function renderSettings() {
@@ -497,7 +499,7 @@
     <input type="file" accept="audio/*" onchange="setSound(event,'lose')">
 
     <br><br>
-    <button onclick="closeSettings()">⬅ Назад</button>
+    <button id="closeSettingsBtn">⬅ Назад</button>
 </div>
 
 </body>
