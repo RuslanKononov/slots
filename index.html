@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Слоты</title>
 
 <style>
@@ -10,25 +10,27 @@ body{
   margin:0;
   background:black;
   color:gold;
-  font-family:Arial, sans-serif;
+  font-family:Arial,sans-serif;
   overflow:hidden;
 }
 
-#slotTitle{
+header{
   text-align:center;
   font-size:26px;
-  margin:10px 0;
+  padding:10px;
   text-shadow:0 0 10px gold;
 }
 
 #slotWrapper{
   position:relative;
+  margin:0 auto;
+  max-width:420px;
 }
 
 #slotMachine{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:10px;
+  gap:8px;
   padding:10px;
 }
 
@@ -36,7 +38,7 @@ body{
   height:240px;
   overflow:hidden;
   border:2px solid gold;
-  border-radius:12px;
+  border-radius:14px;
   background:rgba(0,0,0,.8);
   position:relative;
 }
@@ -45,7 +47,7 @@ body{
   position:absolute;
   top:0;
   width:100%;
-  transition:transform 1.4s cubic-bezier(.1,.7,.1,1);
+  transition:transform 1.5s cubic-bezier(.1,.7,.1,1);
 }
 
 .symbol{
@@ -56,20 +58,27 @@ body{
 }
 
 .symbol img{
-  width:64px;
-  height:64px;
+  width:60px;
+  height:60px;
+}
+
+#lineCanvas{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:5;
 }
 
 button{
-  display:block;
   width:80%;
   margin:15px auto;
   padding:14px;
   font-size:22px;
-  border-radius:30px;
   border:none;
+  border-radius:30px;
   background:linear-gradient(red,darkred);
   color:white;
+  display:block;
 }
 
 #settingsBtn{
@@ -79,9 +88,9 @@ button{
   width:44px;
   height:44px;
   border-radius:50%;
+  border:2px solid gold;
   background:black;
   color:gold;
-  border:2px solid gold;
   font-size:22px;
   z-index:20;
 }
@@ -90,7 +99,6 @@ button{
   position:fixed;
   inset:0;
   background:black;
-  color:gold;
   padding:20px;
   overflow:auto;
   z-index:30;
@@ -99,8 +107,14 @@ button{
 
 #settings input{
   width:100%;
-  padding:10px;
   margin:6px 0;
+  padding:8px;
+}
+
+.symbolItem{
+  border:1px solid gold;
+  padding:10px;
+  margin-bottom:10px;
 }
 
 #popup{
@@ -116,30 +130,17 @@ button{
 .popup-content{
   background:black;
   border:3px solid gold;
-  border-radius:16px;
+  border-radius:18px;
   padding:20px;
   text-align:center;
 }
-
-.popup-content img{
-  max-width:180px;
-  margin:10px 0;
-}
-
-canvas{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-}
-
-#lineCanvas{ z-index:25; }
-#fireworks{ z-index:24; }
+.popup-content img{max-width:160px;}
 </style>
 </head>
 
 <body>
 
-<header id="slotTitle">МОИ СЛОТЫ</header>
+<header id="title"></header>
 
 <div id="slotWrapper">
   <div id="slotMachine">
@@ -159,200 +160,190 @@ canvas{
   <h2>Настройки</h2>
   <label>Название</label>
   <input id="titleInput">
+
   <label>Шанс выигрыша (%)</label>
   <input id="chanceInput" type="number" min="0" max="100">
+
+  <h3>Символы</h3>
+  <div id="symbolsList"></div>
+  <button onclick="addSymbol()">➕ Добавить символ</button>
+
   <button onclick="closeSettings()">⬅ Назад</button>
 </div>
 
 <div id="popup">
   <div class="popup-content">
-    <h2 id="popupTitle"></h2>
-    <img id="popupImage">
-    <button id="popupOk">OK</button>
+    <h2 id="popupText"></h2>
+    <img id="popupImg">
+    <button onclick="closePopup()">OK</button>
   </div>
 </div>
 
-<canvas id="fireworks"></canvas>
-
 <script>
-/* ---------- STATE ---------- */
-const defaultSymbols=[
-  {id:1,img:"https://i.imgur.com/6XgZ7QH.png",action:"Золото!"},
-  {id:2,img:"https://i.imgur.com/BoN9kdC.png",action:"Алмаз!"},
-  {id:3,img:"https://i.imgur.com/zYxDCQT.png",action:"Вишня!"},
-  {id:4,img:"https://i.imgur.com/L8J5y5s.png",action:"Семёрка!"}
-];
-
-let state=JSON.parse(localStorage.getItem("slotState"))||{
+/* ===== STATE ===== */
+const defaultImg="https://i.imgur.com/6XgZ7QH.png";
+let state=JSON.parse(localStorage.getItem("slotsState"))||{
   title:"МОИ СЛОТЫ",
-  winChance:0.3,
-  symbols:defaultSymbols
+  winChance:0.5,
+  symbols:[
+    {img:defaultImg,winImg:defaultImg,text:"Золото"},
+    {img:"https://i.imgur.com/zYxDCQT.png",winImg:null,text:"Вишня"},
+    {img:"https://i.imgur.com/BoN9kdC.png",winImg:null,text:"Алмаз"}
+  ]
 };
+function save(){localStorage.setItem("slotsState",JSON.stringify(state));}
 
-function save(){ localStorage.setItem("slotState",JSON.stringify(state)); }
-
-/* ---------- UI ---------- */
-slotTitle.innerText=state.title;
+/* ===== UI INIT ===== */
+title.innerText=state.title;
 titleInput.value=state.title;
 chanceInput.value=state.winChance*100;
 
-settingsBtn.onclick=()=>settings.style.display="block";
+/* ===== SETTINGS ===== */
+settingsBtn.onclick=()=>{
+  renderSettings();
+  settings.style.display="block";
+};
+
 function closeSettings(){
   state.title=titleInput.value;
   state.winChance=chanceInput.value/100;
-  slotTitle.innerText=state.title;
+  title.innerText=state.title;
   save();
   settings.style.display="none";
 }
 
-/* ---------- SLOT LOGIC ---------- */
-const reels=document.querySelectorAll(".reel");
-
-function createSymbol(s){
-  const d=document.createElement("div");
-  d.className="symbol";
-  const i=document.createElement("img");
-  i.src=s.img;
-  d.appendChild(i);
-  return d;
+function renderSettings(){
+  symbolsList.innerHTML="";
+  state.symbols.forEach((s,i)=>{
+    const d=document.createElement("div");
+    d.className="symbolItem";
+    d.innerHTML=`
+      <label>Картинка символа</label>
+      <input type="file" accept="image/*" onchange="loadImg(event,${i},'img')">
+      <label>Картинка выигрыша</label>
+      <input type="file" accept="image/*" onchange="loadImg(event,${i},'winImg')">
+      <label>Текст</label>
+      <input value="${s.text||""}" oninput="state.symbols[${i}].text=this.value;save()">
+    `;
+    symbolsList.appendChild(d);
+  });
 }
+
+function addSymbol(){
+  state.symbols.push({img:defaultImg,winImg:null,text:""});
+  save();renderSettings();
+}
+
+function loadImg(e,i,key){
+  const r=new FileReader();
+  r.onload=()=>{
+    state.symbols[i][key]=r.result;
+    save();
+  };
+  r.readAsDataURL(e.target.files[0]);
+}
+
+/* ===== SLOT LOGIC ===== */
+const reels=document.querySelectorAll(".reel");
+const canvas=lineCanvas,ctx=canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width=slotWrapper.clientWidth;
+  canvas.height=slotWrapper.clientHeight;
+}
+resizeCanvas();
+window.onresize=resizeCanvas;
 
 spinBtn.onclick=spin;
 
 function spin(){
   spinBtn.disabled=true;
-  clearLine();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   const isWin=Math.random()<state.winChance;
-  let winSymbol=isWin?state.symbols[Math.floor(Math.random()*state.symbols.length)]:null;
+  const winSymbol=isWin?state.symbols[Math.floor(Math.random()*state.symbols.length)]:null;
   let columns=[];
 
-  reels.forEach((reel,idx)=>{
+  reels.forEach((reel,i)=>{
     reel.innerHTML="";
     const track=document.createElement("div");
     track.className="reel-track";
-    let visible;
 
+    let visible=[];
     if(isWin){
-      visible=[randomSymbol(),winSymbol,randomSymbol()];
+      const pos=Math.floor(Math.random()*3);
+      visible=[rand(),rand(),rand()];
+      visible[pos]=winSymbol;
     }else{
-      visible=[randomSymbol(),randomSymbol(),randomSymbol()];
+      visible=[rand(),rand(),rand()];
     }
 
     columns.push(visible);
-
-    const spinList=[...Array(10)].map(randomSymbol).concat(visible);
-    spinList.forEach(s=>track.appendChild(createSymbol(s)));
+    const spinList=[...Array(10)].map(rand).concat(visible);
+    spinList.forEach(s=>{
+      const d=document.createElement("div");
+      d.className="symbol";
+      const img=document.createElement("img");
+      img.src=s.img;
+      d.appendChild(img);
+      track.appendChild(d);
+    });
     reel.appendChild(track);
 
     const offset=(spinList.length-3)*80;
-    track.style.transform="translateY(0)";
-    setTimeout(()=>track.style.transform=`translateY(-${offset}px)`,idx*200);
+    setTimeout(()=>track.style.transform=`translateY(-${offset}px)`,i*200);
   });
 
   setTimeout(()=>{
     spinBtn.disabled=false;
-    checkWin(columns);
-  },1600);
+    if(isWin){
+      drawLine(columns,winSymbol);
+      showPopup(winSymbol);
+    }
+  },1800);
 }
 
-function randomSymbol(){
+function rand(){
   return state.symbols[Math.floor(Math.random()*state.symbols.length)];
 }
 
-/* ---------- WIN CHECK ---------- */
-const lineCanvas=document.getElementById("lineCanvas");
-const ctx=lineCanvas.getContext("2d");
-resizeCanvas();
-window.onresize=resizeCanvas;
-
-function resizeCanvas(){
-  lineCanvas.width=innerWidth;
-  lineCanvas.height=innerHeight;
-}
-
-function checkWin(columns){
-  let symbol=state.symbols.find(s=>
-    columns.every(col=>col.some(c=>c.img===s.img))
-  );
-
-  if(symbol){
-    animateLine(columns,symbol);
-    showPopup("🎉 ВЫИГРЫШ!",symbol.action,symbol.img);
-    startFireworks();
-  }else{
-    showPopup("😌 Не повезло","Попробуй ещё");
-  }
-}
-
-/* ---------- LINE ANIMATION ---------- */
-function animateLine(cols,symbol){
-  let points=[];
-  reels.forEach((reel,i)=>{
-    const row=cols[i].findIndex(s=>s.img===symbol.img);
-    const r=reel.getBoundingClientRect();
-    points.push({
-      x:r.left+r.width/2,
-      y:r.top+row*80+40
-    });
-  });
-
+/* ===== LINE ===== */
+function drawLine(cols,sym){
   ctx.strokeStyle="gold";
   ctx.lineWidth=6;
   ctx.shadowBlur=15;
   ctx.shadowColor="gold";
 
+  let points=[];
+  reels.forEach((r,i)=>{
+    const row=cols[i].findIndex(s=>s===sym);
+    const x=r.offsetLeft+r.offsetWidth/2;
+    const y=r.offsetTop+row*80+40;
+    points.push({x,y});
+  });
+
   let i=0;
-  function draw(){
+  function anim(){
     if(i>=points.length-1)return;
     ctx.beginPath();
     ctx.moveTo(points[i].x,points[i].y);
     ctx.lineTo(points[i+1].x,points[i+1].y);
     ctx.stroke();
     i++;
-    setTimeout(draw,150);
+    setTimeout(anim,150);
   }
-  draw();
+  anim();
 }
 
-function clearLine(){
-  ctx.clearRect(0,0,lineCanvas.width,lineCanvas.height);
-}
-
-/* ---------- POPUP ---------- */
-popupOk.onclick=()=>{
-  popup.style.display="none";
-  stopFireworks();
-  clearLine();
-};
-
-function showPopup(title,text,img){
-  popupTitle.innerText=title+"\n"+text;
-  popupImage.src=img||"";
+/* ===== POPUP ===== */
+function showPopup(sym){
+  popupText.innerText="ВЫИГРЫШ! "+(sym.text||"");
+  popupImg.src=sym.winImg||sym.img;
   popup.style.display="flex";
 }
-
-/* ---------- FIREWORKS ---------- */
-let fw;
-function startFireworks(){
-  const c=fireworks;
-  const fctx=c.getContext("2d");
-  c.width=innerWidth;
-  c.height=innerHeight;
-  fw=setInterval(()=>{
-    fctx.fillStyle="rgba(0,0,0,.2)";
-    fctx.fillRect(0,0,c.width,c.height);
-    fctx.fillStyle="gold";
-    fctx.beginPath();
-    fctx.arc(Math.random()*c.width,Math.random()*c.height,4,0,Math.PI*2);
-    fctx.fill();
-  },50);
-}
-
-function stopFireworks(){
-  clearInterval(fw);
-  const c=fireworks;
-  c.getContext("2d").clearRect(0,0,c.width,c.height);
+function closePopup(){
+  popup.style.display="none";
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 </script>
 
