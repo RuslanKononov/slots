@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Слоты</title>
 
 <style>
@@ -69,6 +69,10 @@ header{
   z-index:5;
 }
 
+body{
+  position:relative;
+}
+
 button{
   width:80%;
   margin:15px auto;
@@ -82,9 +86,9 @@ button{
 }
 
 #settingsBtn{
-  position:fixed;
-  top:calc(env(safe-area-inset-top) + 10px);
-  right:calc(env(safe-area-inset-right) + 10px);
+  position:absolute;
+  top:12px;
+  right:12px;
   width:44px;
   height:44px;
   border-radius:50%;
@@ -92,7 +96,7 @@ button{
   background:black;
   color:gold;
   font-size:22px;
-  z-index:50;
+  z-index:100;
 }
 
 #settings{
@@ -186,9 +190,9 @@ let state=JSON.parse(localStorage.getItem("slotsState"))||{
   title:"МОИ СЛОТЫ",
   winChance:0.5,
   symbols:[
-    {img:defaultImg,winImg:defaultImg,text:"Золото"},
-    {img:"https://i.imgur.com/zYxDCQT.png",winImg:null,text:"Вишня"},
-    {img:"https://i.imgur.com/BoN9kdC.png",winImg:null,text:"Алмаз"}
+    {id:uid(), img:defaultImg, winImg:null, text:"Золото"},
+    {id:uid(), img:"https://i.imgur.com/zYxDCQT.png", winImg:null, text:"Вишня"},
+    {id:uid(), img:"https://i.imgur.com/BoN9kdC.png", winImg:null, text:"Алмаз"}
   ]
 };
 function save(){localStorage.setItem("slotsState",JSON.stringify(state));}
@@ -222,9 +226,9 @@ function renderSettings(){
     d.className="symbolItem";
     d.innerHTML=`
       <label>Картинка символа</label>
-      <input type="file" accept="image/*" onchange="loadImg(event,${i},'img')">
-      <label>Картинка выигрыша</label>
-      <input type="file" accept="image/*" onchange="loadImg(event,${i},'winImg')">
+      <input type="file" accept="image/*" onchange="loadImg(event,'${s.id}','img')">
+  <label>Картинка выигрыша</label>
+      <input type="file" accept="image/*" onchange="loadImg(event,'${s.id}','winImg')">
       <label>Текст</label>
       <input value="${s.text||""}" oninput="state.symbols[${i}].text=this.value;save()">
     `;
@@ -232,8 +236,10 @@ function renderSettings(){
   });
 }
 
+
 function addSymbol(){
   state.symbols.push({
+    id: uid(),
     img: defaultImg,
     winImg: null,
     text: ""
@@ -242,13 +248,18 @@ function addSymbol(){
   renderSettings();
 }
 
-function loadImg(e,i,key){
-  const r=new FileReader();
-  r.onload=()=>{
-    state.symbols[i][key]=r.result;
+function loadImg(e, id, key){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const sym = state.symbols.find(s => s.id === id);
+    if(!sym) return;
+    sym[key] = reader.result;
     save();
   };
-  r.readAsDataURL(e.target.files[0]);
+  reader.readAsDataURL(file);
 }
 
 /* ===== SLOT LOGIC ===== */
@@ -354,6 +365,12 @@ function closePopup(){
   popup.style.display="none";
   ctx.clearRect(0,0,canvas.width,canvas.height);
 }
+
+
+function uid(){
+  return Math.random().toString(36).slice(2);
+}
+
 </script>
 
 </body>
