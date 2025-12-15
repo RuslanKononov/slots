@@ -10,7 +10,7 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
 #slotTitle {text-align:center; font-size:28px; margin:20px 0; text-shadow:0 0 10px gold;}
 #slotMachine {display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:16px;}
 .reel {height:240px; overflow:hidden; border:2px solid gold; border-radius:14px; background:rgba(0,0,0,0.75); position:relative;}
-.reel-track {position:absolute; top:0; width:100%; transition: transform 0.8s cubic-bezier(.1,.7,.1,1);}
+.reel-track {position:absolute; top:0; width:100%;}
 .symbol {height:80px; display:flex; align-items:center; justify-content:center;}
 .symbol img {max-height:70px; max-width:70px;}
 #spinBtn {width:80%; margin:20px auto; display:block; font-size:26px; padding:16px; background:linear-gradient(red,darkred); color:white; border:none; border-radius:40px; box-shadow:0 0 20px red;}
@@ -21,6 +21,7 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
 #popup {position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:20;}
 .popup-content {background:black; border:3px solid gold; border-radius:20px; padding:20px; text-align:center;}
 .popup-content img {max-width:200px; margin:10px 0;}
+#fireworks {position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:19;}
 </style>
 </head>
 <body>
@@ -61,8 +62,9 @@ body { margin:0; font-family:Arial,sans-serif; background:black; color:gold; ove
     <img id="popupImage">
     <button id="popupOk">OK</button>
   </div>
-  <canvas id="fireworks"></canvas>
 </div>
+
+<canvas id="fireworks"></canvas>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -81,6 +83,8 @@ const popupTitle = document.getElementById("popupTitle");
 const popupImage = document.getElementById("popupImage");
 const popupOk = document.getElementById("popupOk");
 const background = document.getElementById("background");
+
+let winChance = 0.2; // 20% шанс совпадения
 
 let state = JSON.parse(localStorage.getItem("state")) || {
   title:"МОИ СЛОТЫ",
@@ -103,7 +107,7 @@ slotTitle.innerText = state.title;
 
 // ---------- SETTINGS ----------
 settingsBtn.onclick = ()=>{ settings.style.display="block"; renderSettings(); }
-closeSettingsBtn.onclick = ()=>{ settings.style.display="none"; slotTitle.innerText=state.title; applyBackground(); renderSlots(); saveState(); }
+closeSettingsBtn.onclick = ()=>{ settings.style.display="none"; slotTitle.innerText=state.title; applyBackground(); renderSlots(); }
 addSymbolBtn.onclick = ()=>{ if(state.symbols.length>=30) return alert("Максимум 30"); state.symbols.push({img:"",action:"",winImg:null}); renderSettings(); saveState(); }
 
 function renderSettings(){
@@ -156,20 +160,43 @@ spinBtn.onclick=()=>{
   spinBtn.disabled=true;
   const reels=document.querySelectorAll(".reel");
   const finalResult=[];
+  const isWin=Math.random()<winChance;
+
   reels.forEach((reel,colIndex)=>{
     reel.innerHTML="";
-    const track=document.createElement("div"); track.className="reel-track";
-    const pool=shuffle(state.symbols);
-    const visible=pool.slice(0,3);
-    finalResult[colIndex]=visible[1];
-    const spinList=shuffle(state.symbols).concat(visible);
+    const track=document.createElement("div");
+    track.className="reel-track";
+
+    let visible;
+    if(isWin){
+        const s=state.symbols[Math.floor(Math.random()*state.symbols.length)];
+        visible=[shuffle(state.symbols)[0],s,shuffle(state.symbols)[1]];
+        finalResult[colIndex]=s;
+    } else {
+        const pool=shuffle(state.symbols);
+        visible=pool.slice(0,3);
+        finalResult[colIndex]=visible[1];
+    }
+
+    const spinList=[];
+    for(let i=0;i<10;i++) spinList.push(...shuffle(state.symbols));
+    spinList.push(...visible);
+
     spinList.forEach(s=>track.appendChild(createSymbolEl(s)));
     reel.appendChild(track);
+
     const offset=(spinList.length-3)*80;
-    track.style.transform=`translateY(-${offset}px)`;
-    setTimeout(()=>{ track.style.transitionDuration="0.8s"; track.style.transform=`translateY(-${offset}px)`; },colIndex*250);
+    track.style.transform=`translateY(0)`;
+    setTimeout(()=>{
+      track.style.transition=`transform ${1.5+colIndex*0.3}s cubic-bezier(.1,.7,.1,1)`;
+      track.style.transform=`translateY(-${offset}px)`;
+    },50);
   });
-  setTimeout(()=>{ spinBtn.disabled=false; checkWinAnimated(finalResult); },250*5+900);
+
+  setTimeout(()=>{
+    spinBtn.disabled=false;
+    checkWinAnimated(finalResult);
+  },2500+reels.length*300);
 };
 
 function checkWinAnimated(centerSymbols){
@@ -195,7 +222,14 @@ function stopFireworks(){ clearInterval(fw); }
 // ---------- RENDER SLOTS ----------
 function renderSlots(){ 
   const reels=document.querySelectorAll(".reel"); 
-  reels.forEach((reel,i)=>{ reel.innerHTML=""; const track=document.createElement("div"); track.className="reel-track"; const visible=[state.symbols[i%state.symbols.length],state.symbols[(i+1)%state.symbols.length],state.symbols[(i+2)%state.symbols.length]]; visible.forEach(s=>track.appendChild(createSymbolEl(s))); reel.appendChild(track); }); 
+  reels.forEach((reel,i)=>{ 
+    reel.innerHTML=""; 
+    const track=document.createElement("div"); 
+    track.className="reel-track"; 
+    const visible=[state.symbols[i%state.symbols.length],state.symbols[(i+1)%state.symbols.length],state.symbols[(i+2)%state.symbols.length]]; 
+    visible.forEach(s=>track.appendChild(createSymbolEl(s))); 
+    reel.appendChild(track); 
+  }); 
 }
 renderSlots();
 
