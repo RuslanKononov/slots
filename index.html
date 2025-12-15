@@ -83,8 +83,8 @@ button{
 
 #settingsBtn{
   position:fixed;
-  top:10px;
-  right:10px;
+  top:calc(env(safe-area-inset-top) + 10px);
+  right:calc(env(safe-area-inset-right) + 10px);
   width:44px;
   height:44px;
   border-radius:50%;
@@ -92,7 +92,7 @@ button{
   background:black;
   color:gold;
   font-size:22px;
-  z-index:20;
+  z-index:50;
 }
 
 #settings{
@@ -205,11 +205,14 @@ settingsBtn.onclick=()=>{
 };
 
 function closeSettings(){
-  state.title=titleInput.value;
-  state.winChance=chanceInput.value/100;
-  title.innerText=state.title;
+  state.title = titleInput.value;
+  state.winChance = Math.max(0, Math.min(1, chanceInput.value / 100));
+
   save();
-  settings.style.display="none";
+
+  title.innerText = state.title;
+
+  settings.style.display = "none";
 }
 
 function renderSettings(){
@@ -230,8 +233,13 @@ function renderSettings(){
 }
 
 function addSymbol(){
-  state.symbols.push({img:defaultImg,winImg:null,text:""});
-  save();renderSettings();
+  state.symbols.push({
+    img: defaultImg,
+    winImg: null,
+    text: ""
+  });
+  save();
+  renderSettings();
 }
 
 function loadImg(e,i,key){
@@ -262,6 +270,7 @@ function spin(){
 
   const isWin=Math.random()<state.winChance;
   const winSymbol=isWin?state.symbols[Math.floor(Math.random()*state.symbols.length)]:null;
+  
   let columns=[];
 
   reels.forEach((reel,i)=>{
