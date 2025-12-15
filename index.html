@@ -381,6 +381,44 @@ closeSettingsBtn.addEventListener("click", () => {
     saveState();                       // сохраняем изменения
 });
 
+        function closeSettings() {
+  settings.classList.add("hidden");
+  slotTitle.innerText = state.title; // обновляем заголовок
+  applyBackground();                 // обновляем фон на главной
+  renderSlots();                     // если есть функция перерисовки слотов
+  // saveState(); // теперь уже не обязательно, так как сохраняли при изменениях
+}
+        // Символ
+function loadSymbolImg(e,i){
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.symbols[i].img = reader.result;
+    saveState(); // сохраняем сразу
+  }
+  reader.readAsDataURL(e.target.files[0]);
+}
+
+// Картинка выигрыша
+function loadWinImg(e,i){
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.symbols[i].winImg = reader.result;
+    saveState(); // сохраняем сразу
+  }
+  reader.readAsDataURL(e.target.files[0]);
+}
+
+// Background
+function setBackground(e){
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.background = reader.result;
+    applyBackground(); // обновляем фон сразу
+    saveState();       // сохраняем
+  }
+  reader.readAsDataURL(e.target.files[0]);
+}
+
         /* ---------- TITLE ---------- */
         function renderSettings() {
             titleInput.value = state.title;
