@@ -315,16 +315,27 @@ function spin(){
   });
 
   setTimeout(()=>{
-    spinBtn.disabled=false;
-    if(isWin){
-      drawLine(columns,winSymbol);
-      showPopup(winSymbol);
+    spinBtn.disabled = false;
+    const winResult = findWinningSymbol(columns);
+    if (winResult) {
+      drawLine(columns, winResult);
+      showPopup(winResult);
     }
   },1800);
 }
 
+function findWinningSymbol(columns){
+  for(const sym of state.symbols){
+    if(columns.every(col => col.some(s => s.id === sym.id))){
+      return sym;
+    }
+  }
+  return null;
+}
+
 function rand(){
-  return state.symbols[Math.floor(Math.random()*state.symbols.length)];
+  const s = state.symbols[Math.floor(Math.random()*state.symbols.length)];
+  return { ...s };
 }
 
 /* ===== LINE ===== */
@@ -336,7 +347,7 @@ function drawLine(cols,sym){
 
   let points=[];
   reels.forEach((r,i)=>{
-    const row=cols[i].findIndex(s=>s===sym);
+    const row=cols[i].findIndex(s=>s.id===sym.id);
     const x=r.offsetLeft+r.offsetWidth/2;
     const y=r.offsetTop+row*80+40;
     points.push({x,y});
